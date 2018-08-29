@@ -3,6 +3,16 @@
 
 train <- read.csv("train.csv")
 
+# Build Random Forest 
+library(randomForest) 
+library(rpart) 
+set.seed(2016) 
+Agefit <- rpart(Age ~ Pclass + Sex + SibSp + Parch + Fare + Embarked, 
+                data=train[!is.na(train$Age),], method="anova") 
+train$Age[is.na(train$Age)] <- predict(Agefit, train[is.na(train$Age),]) 
+fit <- randomForest(as.factor(Survived) ~ Pclass + Sex + SibSp + Parch + Fare + Embarked, data=train) 
+varImpPlot(fit)
+
 # Survival rate
 table(train$Survived)
 prop.table(table(train$Survived))
@@ -21,6 +31,21 @@ prop.table(table(train$AgeRange, train$Survived), 1)
 # How does class influence survival?
 summary(train$Pclass)
 prop.table(table(train$Pclass, train$Survived), 1)
+
+# How does fare influence survival? 
+summary(train$Fare)
+hist(train$Fare) 
+quantile(train$Fare, prob = seq(0, 1, length = 11)) 
+# Divide into deciles based on fare 
+for (i in 10:1) 
+  train$FarePercentile[train$Fare < quantile(train$Fare, i/10)] <- (i-1)*10 
+prop.table(table(train$FarePercentile, train$Survived), 1) 
+
+train$Wealth <- "Middle" 
+train$Wealth[train$FarePercentile == 90] <- "Upper" 
+train$Wealth[train$FarePercentile <= 30 ] <- "Lower" 
+table(train$Wealth) 
+prop.table(table(train$Wealth, train$Survived), 1)
 
 aggregate(Survived ~ Wealth + AgeRange + Sex, data=train, FUN=length)
 aggregate(Survived ~ Pclass + AgeRange + Sex, data=train, FUN=function(x){sum(x)/length(x)})
